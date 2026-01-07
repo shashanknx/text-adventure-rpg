@@ -1,55 +1,66 @@
-# main.py - An interactive, generative, text-based adventure RPG
+import os
+import openai
 
-import random
+def get_openai_api_key():
+    """
+    Retrieves the OpenAI API key from the environment variable 'OPENAI_API_KEY'.
+    If not set, prompts the user to manually define it in the code.
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OpenAI API key not found. Please set the environment variable 'OPENAI_API_KEY' or hardcode the key in the script (not recommended).")
+    return api_key
 
-# Generative story mechanics
-class StoryGenerator:
-    def __init__(self):
-        self.events = [
-            "a mysterious fog envelops the area, obscuring your vision.",
-            "you hear rustling in the bushes nearby. Someone or something is watching you.",
-            "a glowing artifact catches your eye. It hums with otherworldly energy.",
-            "an old traveler approaches you with a riddle and a promise of reward if you answer correctly.",
-            "you stumble upon the remnants of an ancient battle, weapons and shields scattered on the ground.",
-            "a distant howl sends a chill down your spine as you tread carefully through the terrain."
-        ]
-        self.explore_counter = 0
+def llm_storytelling():
+    """
+    Initiates a collaborative storytelling loop between the player and OpenAI's language model.
+    """
+    print("Welcome to the Collaborative Storytelling Adventure!")
+    print("Here, you'll co-create a story with the power of AI.")
 
-    def generate_event(self):
-        self.explore_counter += 1
-        event = random.choice(self.events)
-        return f"On your exploration #{self.explore_counter}, {event}"
+    # Retrieve API key and set up OpenAI
+    openai.api_key = get_openai_api_key()
 
-def game_start():
-    print("Welcome to the Text Adventure RPG!")
-    print("You find yourself in a mysterious land filled with adventure and danger.")
-    print("Your choices will determine your fate. Choose wisely!")
+    # Initial prompt to start the story
+    system_prompt = "You are a creative AI helping a player co-write an epic adventure story. Start with an opening.")
 
-def main():
-    story = StoryGenerator()
+    print("\nThe AI will begin the story. Afterward, you can add your input to continue it.")
+    context = ""  # This will store the evolving story as context
 
-    game_start()
+    # Start collaborative storytelling loop
     while True:
-        print("\nWhat would you like to do?")
-        print("1. Explore")
-        print("2. Rest")
-        print("3. Check Stats")
-        print("4. Quit")
-        
-        choice = input("Enter the number of your choice: ")
-        if choice == "1":
-            print("\nYou venture into the unknown...")
-            print(story.generate_event())
-        elif choice == "2":
-            print("\nYou set up camp and rest for the night. Nothing unusual happens.")
-        elif choice == "3":
-            print("\nCharacter Stats:")
-            print(f"Exploration Count: {story.explore_counter}")
-        elif choice == "4":
-            print("\nThank you for playing! Goodbye!")
+        # AI response
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": context}
+            ]
+        )
+        ai_part = response.choices[0].message.content.strip()
+        print("\nAI says:")
+        print(ai_part)
+
+        # Append AI output to context
+        context += f"\nAI: {ai_part}"
+
+        # Player input
+        user_input = input("\nYour turn! Add your part to the story: ")
+        context += f"\nPlayer: {user_input}"
+
+        print("\nStory so far:")
+        print(context)
+
+        # Option to continue or exit
+        continue_prompt = input("Do you want to continue the story? (yes/no): ").strip().lower()
+        if continue_prompt in ("no", "n"):
             break
-        else:
-            print("\nInvalid choice. Please try again.")
+
+    print("\nThank you for playing! Your story has been saved.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        llm_storytelling()
+    except ValueError as e:
+        print(f"Error: {e}")
+        print("Please configure your OpenAI API key and try again.")
